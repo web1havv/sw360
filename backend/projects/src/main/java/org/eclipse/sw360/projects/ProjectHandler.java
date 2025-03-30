@@ -43,6 +43,7 @@ import org.eclipse.sw360.datahandler.thrift.projects.ProjectService;
 import org.eclipse.sw360.datahandler.thrift.projects.UsedReleaseRelations;
 import org.eclipse.sw360.datahandler.thrift.users.User;
 
+
 import com.ibm.cloud.cloudant.v1.Cloudant;
 
 import java.io.IOException;
@@ -306,9 +307,16 @@ public class ProjectHandler implements ProjectService.Iface {
 
         // Prevent duplicate external IDs
         if (project.isSetExternalIds()) {
-            Set<Project> existingProjects = searchByExternalIds(project.getExternalIds(), user);
+            // Convert Map<String,String> to Map<String,Set<String>> for searchByExternalIds
+            Map<String, Set<String>> externalIdsMap = new HashMap<>();
+            project.getExternalIds().forEach((key, value) ->
+                    externalIdsMap.put(key, Collections.singleton(value)));
+
+            Set<Project> existingProjects = searchByExternalIds(externalIdsMap, user);
             if (!existingProjects.isEmpty()) {
-                return new AddDocumentRequestSummary().setRequestStatus(RequestStatus.DUPLICATE);
+                return new AddDocumentRequestSummary()
+                        .setRequestStatus(RequestStatus.DUPLICATE)
+                        .setMessage("Project with these external IDs already exists");
             }
         }
 
